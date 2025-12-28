@@ -24,10 +24,12 @@ fn read_next_line(reader: *std.Io.Reader, buffer: []u8, start_index: usize) !usi
 const Map = std.static_string_map.StaticStringMap;
 const MethodMap = Map(Method).initComptime(.{
     .{ "GET", Method.GET },
+    .{ "POST", Method.POST },
 });
 
 pub const Method = enum {
     GET,
+    POST,
 
     pub fn init(text: []const u8) !Method {
         return MethodMap.get(text).?;
@@ -47,12 +49,14 @@ const Request = struct {
     version: []const u8,
     uri: []const u8,
     header: []const u8,
-    pub fn init(method: Method, uri: []const u8, version: []const u8, header: []const u8) Request {
+    content_length: usize,
+    pub fn init(method: Method, uri: []const u8, version: []const u8, header: []const u8, content_length: usize) Request {
         return Request{
             .method = method,
             .uri = uri,
             .version = version,
             .header = header,
+            .content_length = content_length,
         };
     }
 };
@@ -66,6 +70,18 @@ pub fn parse_request(text: []u8) Request {
     const uri = iterator.next().?;
     const version = iterator.next().?;
     const header = text[(line_index + 1)..];
-    const request = Request.init(method, uri, version, header);
+    const content_length = parse_content_length(header) orelse 0;
+
+    const request = Request.init(method, uri, version, header, content_length);
     return request;
+}
+
+fn parse_content_length(headers: []const u8) ?usize {
+    const needle = "Content-Length: ";
+    const start = std.mem.indexOf(u8, headers, needle) orelse return null;
+    const value_start = start + needle.len;
+
+    const value_end = std.mem.indexOfScalarPos(u8, headers, value_start, '\r') orelse std.mem.indexOfScalarPos(u8, headers, value_start, '\n') orelse headers.len;
+
+    return std.fmt.parseInt(usize, headers[value_start..value_end], 10) catch null;
 }
