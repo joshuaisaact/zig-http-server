@@ -20,16 +20,23 @@ pub fn main() !void {
 
         var request_buffer: [1000]u8 = undefined;
         @memset(request_buffer[0..], 0);
-        try Request.read_request(io, connection, request_buffer[0..]);
+        const bytes_read = try Request.read_request(io, connection, request_buffer[0..]);
 
-        const request = Request.parse_request(request_buffer[0..]);
+        const request = Request.parse_request(request_buffer[0..bytes_read]);
         print("method: {},\nuri: {s}, \nversion: {s}, \nheader: {s}\n", .{ request.method, request.uri, request.version, request.header });
-        if (request.method == Request.Method.GET) {
-            if (std.mem.eql(u8, request.uri, "/")) {
+
+        switch (request.method) {
+            .GET => {
+                if (std.mem.eql(u8, request.uri, "/")) {
+                    try Response.send_200(connection, io);
+                } else {
+                    try Response.send_404(connection, io);
+                }
+            },
+            .POST => {
+                print("POST body: {s}\n", .{request.body});
                 try Response.send_200(connection, io);
-            } else {
-                try Response.send_404(connection, io);
-            }
+            },
         }
     }
 }
