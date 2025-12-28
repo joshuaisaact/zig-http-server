@@ -13,9 +13,11 @@
 
   ```bash
   zig build run
-```
 
-Then visit http://localhost:8080/ or:
+  Then visit http://localhost:8080/ 
+  
+  or:
 
   curl http://localhost:8080/
   curl -X POST -d "hello" http://localhost:8080/
+```
