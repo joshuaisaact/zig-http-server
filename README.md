@@ -6,10 +6,15 @@ A minimal HTTP/1.1 server built from scratch in Zig.
 
 I built this to learn two things at once:
 
-1. **Zig patterns** — error propagation with `try`, optionals with `orelse`, `defer` for cleanup, comptime string maps, slice manipulation, and how structs with methods replace classes
-2. **HTTP internals** — what actually happens when bytes arrive on a socket, how `\r\n` delimiters separate headers, how `Content-Length` tells you when the body ends, and the request/response cycle at the protocol level
+1. **Zig patterns** 
 
-No frameworks, no shortcuts — just `std.Io.net` sockets and byte parsing.
+Error propagation with `try`, optionals with `orelse`, `defer` for cleanup, comptime string maps, slice manipulation, and how structs with methods replace classes
+
+2. **HTTP internals**  
+
+What actually happens when bytes arrive on a socket, how `\r\n` delimiters separate headers, how `Content-Length` tells you when the body ends, and the request/response cycle at the protocol level
+
+No frameworks, no shortcuts. Just `std.Io.net` sockets and byte parsing.
 
 ## Features
 
