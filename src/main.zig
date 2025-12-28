@@ -23,7 +23,7 @@ pub fn main() !void {
         try Request.read_request(io, connection, request_buffer[0..]);
 
         const request = Request.parse_request(request_buffer[0..]);
-        // print("{any}\n", .{request});
+        print("method: {},\n uri: {s}, \nversion: {s}, \nheader: {s}\n", .{ request.method, request.uri, request.version, request.header });
         if (request.method == Request.Method.GET) {
             if (std.mem.eql(u8, request.uri, "/")) {
                 try Response.send_200(connection, io);

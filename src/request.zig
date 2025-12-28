@@ -6,9 +6,12 @@ pub fn read_request(io: std.Io, conn: Stream, buffer: []u8) !void {
     var reader = conn.reader(io, &recv_buffer);
     const reader_interface = &reader.interface;
     var start_index: usize = 0;
-    for (0..5) |_| {
+
+    while (true) {
         const len = try read_next_line(reader_interface, buffer, start_index);
         start_index += len;
+
+        if (len <= 2) break;
     }
 }
 
@@ -43,21 +46,26 @@ const Request = struct {
     method: Method,
     version: []const u8,
     uri: []const u8,
-    pub fn init(method: Method, uri: []const u8, version: []const u8) Request {
+    header: []const u8,
+    pub fn init(method: Method, uri: []const u8, version: []const u8, header: []const u8) Request {
         return Request{
             .method = method,
             .uri = uri,
             .version = version,
+            .header = header,
         };
     }
 };
 
 pub fn parse_request(text: []u8) Request {
     const line_index = std.mem.findScalar(u8, text, '\n') orelse text.len;
-    var iterator = std.mem.splitScalar(u8, text[0..line_index], ' ');
-    const method = try Method.init(iterator.next().?);
+    const line_end = if (line_index > 0 and text[line_index - 1] == '\r') line_index - 1 else line_index;
+
+    var iterator = std.mem.splitScalar(u8, text[0..line_end], ' ');
+    const method = Method.init(iterator.next().?) catch Method.GET;
     const uri = iterator.next().?;
     const version = iterator.next().?;
-    const request = Request.init(method, uri, version);
+    const header = text[(line_index + 1)..];
+    const request = Request.init(method, uri, version, header);
     return request;
 }

@@ -19,6 +19,6 @@ pub const Server = struct {
 
     pub fn listen(self: Server) !std.Io.net.Server {
         print("Server Addr: {s}:{any}\n", .{ self.host, self.port });
-        return try self.addr.listen(self.io, .{ .mode = Socket.Mode.stream, .protocol = Protocol.tcp });
+        return try self.addr.listen(self.io, .{ .mode = Socket.Mode.stream, .protocol = Protocol.tcp, .reuse_address = true });
     }
 };
