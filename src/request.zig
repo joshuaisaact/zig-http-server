@@ -19,7 +19,9 @@ fn read_next_line(reader: *std.Io.Reader, buffer: []u8, start_index: usize) !usi
 }
 
 const Map = std.static_string_map.StaticStringMap;
-const MethodMap = Map(Method).initComptime(.{.{ "GET", Method.GET }});
+const MethodMap = Map(Method).initComptime(.{
+    .{ "GET", Method.GET },
+});
 
 pub const Method = enum {
     GET,
