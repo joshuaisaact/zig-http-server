@@ -57,18 +57,36 @@ const Request = struct {
     method: Method,
     version: []const u8,
     uri: []const u8,
-    header: []const u8,
+    headers: []const u8,
     content_length: usize,
     body: []const u8,
-    pub fn init(method: Method, uri: []const u8, version: []const u8, header: []const u8, content_length: usize, body: []const u8) Request {
+
+    pub fn init(method: Method, uri: []const u8, version: []const u8, headers: []const u8, content_length: usize, body: []const u8) Request {
         return Request{
             .method = method,
             .uri = uri,
             .version = version,
-            .header = header,
+            .headers = headers,
             .content_length = content_length,
             .body = body,
         };
+    }
+
+    pub fn getHeader(self: Request, name: []const u8) ?[]const u8 {
+        const needle_len = name.len + 2;
+        var i: usize = 0;
+
+        while (std.mem.indexOfPos(u8, self.headers, i, name)) |pos| {
+            if (pos + needle_len < self.headers.len and self.headers[pos + name.len] == ':' and
+                self.headers[pos + name.len + 1] == ' ')
+            {
+                const value_start = pos + needle_len;
+                const value_end = std.mem.indexOfPos(u8, self.headers, value_start, "\r\n") orelse self.headers.len;
+                return self.headers[value_start..value_end];
+            }
+            i = pos + 1;
+        }
+        return null;
     }
 };
 

@@ -23,7 +23,7 @@ pub fn main() !void {
         const bytes_read = try Request.read_request(io, connection, request_buffer[0..]);
 
         const request = Request.parse_request(request_buffer[0..bytes_read]);
-        print("method: {},\nuri: {s}, \nversion: {s}, \nheader: {s}\n", .{ request.method, request.uri, request.version, request.header });
+        print("method: {},\nuri: {s}, \nversion: {s}, \nheader: {s}\n", .{ request.method, request.uri, request.version, request.headers });
 
         switch (request.method) {
             .GET => {
