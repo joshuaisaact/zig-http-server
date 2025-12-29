@@ -97,14 +97,20 @@ const Request = struct {
     }
 };
 
-fn parseHeaders(raw: []const u8, headers: *Headers) !void {
+fn parseHeaders(raw: []u8, headers: *Headers) !void {
     var lines = std.mem.splitSequence(u8, raw, "\r\n");
 
     while (lines.next()) |line| {
         if (line.len == 0) break;
 
         const colon = std.mem.indexOf(u8, line, ":") orelse continue;
-        const key = line[0..colon];
+        const key = @constCast(line[0..colon]);
+
+        for (key) |*c| {
+            if (c.* >= 'A' and c.* <= 'Z') {
+                c.* = c.* + 32;
+            }
+        }
 
         var value_start = colon + 1;
         if (value_start < line.len and line[value_start] == ' ') {
@@ -127,7 +133,7 @@ pub fn parse_request(text: []u8) !Request {
     var headers = Headers{};
     const header_text = text[(line_index + 1)..];
     try parseHeaders(header_text, &headers);
-    const cl_str = headers.get("Content-Length") orelse "";
+    const cl_str = headers.get("content-length") orelse "";
     const content_length = atoi(cl_str) orelse 0;
     const body = parse_body(text, content_length);
 

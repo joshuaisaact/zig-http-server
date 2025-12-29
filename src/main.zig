@@ -33,10 +33,10 @@ pub fn main() !void {
 
         // Debug printing for learning.
         print("method: {},\nuri: {s}, \nversion: {s}, \n", .{ request.method, request.uri, request.version });
-        print("Host: {s}\n", .{request.headers.get("Host") orelse "none"});
-        print("Content-Type: {s}\n", .{request.headers.get("Content-Type") orelse "none"});
-        print("Content-Length: {s}\n", .{request.headers.get("Content-Length") orelse "0"});
-        print("User-Agent: {s}\n", .{request.headers.get("User-Agent") orelse "none"});
+        print("Host: {s}\n", .{request.headers.get("host") orelse "none"});
+        print("Content-Type: {s}\n", .{request.headers.get("content-type") orelse "none"});
+        print("Content-Length: {s}\n", .{request.headers.get("content-length") orelse "0"});
+        print("User-Agent: {s}\n", .{request.headers.get("user-agent") orelse "none"});
 
         switch (request.method) {
             .GET => {
