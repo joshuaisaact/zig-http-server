@@ -20,10 +20,23 @@ pub fn main() !void {
 
         var request_buffer: [1000]u8 = undefined;
         @memset(request_buffer[0..], 0);
-        const bytes_read = try Request.read_request(io, connection, request_buffer[0..]);
 
-        const request = Request.parse_request(request_buffer[0..bytes_read]);
-        print("method: {},\nuri: {s}, \nversion: {s}, \nheader: {s}\n", .{ request.method, request.uri, request.version, request.headers });
+        const bytes_read = Request.read_request(io, connection, request_buffer[0..]) catch |err| {
+            if (err == error.EndOfStream) {
+                print("Client disconnected\n", .{});
+                continue;
+            }
+            return err;
+        };
+
+        const request = try Request.parse_request(request_buffer[0..bytes_read]);
+
+        // Debug printing for learning.
+        print("method: {},\nuri: {s}, \nversion: {s}, \n", .{ request.method, request.uri, request.version });
+        print("Host: {s}\n", .{request.headers.get("Host") orelse "none"});
+        print("Content-Type: {s}\n", .{request.headers.get("Content-Type") orelse "none"});
+        print("Content-Length: {s}\n", .{request.headers.get("Content-Length") orelse "0"});
+        print("User-Agent: {s}\n", .{request.headers.get("User-Agent") orelse "none"});
 
         switch (request.method) {
             .GET => {

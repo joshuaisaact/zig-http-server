@@ -53,15 +53,39 @@ pub const Method = enum {
     }
 };
 
+const Headers = struct {
+    keys: [32][]const u8 = undefined,
+    values: [32][]const u8 = undefined,
+    len: usize = 0,
+
+    pub fn add(self: *Headers, key: []const u8, value: []const u8) !void {
+        if (self.len >= 32) return error.TooManyHeaders;
+        self.keys[self.len] = key;
+        self.values[self.len] = value;
+        self.len += 1;
+    }
+
+    pub fn get(self: Headers, needle: []const u8) ?[]const u8 {
+        for (self.keys[0..self.len], self.values[0..self.len]) |key, value| {
+            if (std.mem.eql(u8, key, needle)) return value;
+        }
+        return null;
+    }
+
+    pub fn reset(self: *Headers) void {
+        self.len = 0;
+    }
+};
+
 const Request = struct {
     method: Method,
     version: []const u8,
     uri: []const u8,
-    headers: []const u8,
+    headers: Headers,
     content_length: usize,
     body: []const u8,
 
-    pub fn init(method: Method, uri: []const u8, version: []const u8, headers: []const u8, content_length: usize, body: []const u8) Request {
+    pub fn init(method: Method, uri: []const u8, version: []const u8, headers: Headers, content_length: usize, body: []const u8) Request {
         return Request{
             .method = method,
             .uri = uri,
@@ -71,26 +95,28 @@ const Request = struct {
             .body = body,
         };
     }
-
-    pub fn getHeader(self: Request, name: []const u8) ?[]const u8 {
-        const needle_len = name.len + 2;
-        var i: usize = 0;
-
-        while (std.mem.indexOfPos(u8, self.headers, i, name)) |pos| {
-            if (pos + needle_len < self.headers.len and self.headers[pos + name.len] == ':' and
-                self.headers[pos + name.len + 1] == ' ')
-            {
-                const value_start = pos + needle_len;
-                const value_end = std.mem.indexOfPos(u8, self.headers, value_start, "\r\n") orelse self.headers.len;
-                return self.headers[value_start..value_end];
-            }
-            i = pos + 1;
-        }
-        return null;
-    }
 };
 
-pub fn parse_request(text: []u8) Request {
+fn parseHeaders(raw: []const u8, headers: *Headers) !void {
+    var lines = std.mem.splitSequence(u8, raw, "\r\n");
+
+    while (lines.next()) |line| {
+        if (line.len == 0) break;
+
+        const colon = std.mem.indexOf(u8, line, ":") orelse continue;
+        const key = line[0..colon];
+
+        var value_start = colon + 1;
+        if (value_start < line.len and line[value_start] == ' ') {
+            value_start += 1;
+        }
+        const value = line[value_start..];
+
+        try headers.add(key, value);
+    }
+}
+
+pub fn parse_request(text: []u8) !Request {
     const line_index = std.mem.findScalar(u8, text, '\n') orelse text.len;
     const line_end = if (line_index > 0 and text[line_index - 1] == '\r') line_index - 1 else line_index;
 
@@ -98,11 +124,14 @@ pub fn parse_request(text: []u8) Request {
     const method = Method.init(iterator.next().?) catch Method.GET;
     const uri = iterator.next().?;
     const version = iterator.next().?;
-    const header = text[(line_index + 1)..];
-    const content_length = parse_content_length(header) orelse 0;
+    var headers = Headers{};
+    const header_text = text[(line_index + 1)..];
+    try parseHeaders(header_text, &headers);
+    const cl_str = headers.get("Content-Length") orelse "";
+    const content_length = atoi(cl_str) orelse 0;
     const body = parse_body(text, content_length);
 
-    const request = Request.init(method, uri, version, header, content_length, body);
+    const request = Request.init(method, uri, version, headers, content_length, body);
     return request;
 }
 
@@ -125,4 +154,21 @@ fn parse_body(text: []const u8, content_length: usize) []const u8 {
 
     const end = @min(actual_start + content_length, text.len);
     return text[actual_start..end];
+}
+
+fn atoi(str: []const u8) ?usize {
+    if (str.len == 0) return null;
+
+    var n: usize = 0;
+    for (str) |byte| {
+        // Only accept ASCII digits
+        if (byte < '0' or byte > '9') return null;
+
+        // Multiply by 10, checking for overflow
+        n = std.math.mul(usize, n, 10) catch return null;
+
+        // Add the digit, checking for overflow
+        n = std.math.add(usize, n, @intCast(byte - '0')) catch return null;
+    }
+    return n;
 }
